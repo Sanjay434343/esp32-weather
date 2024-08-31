@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Weather Data</title>
+    <!-- Include Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <style>
+        :root {
+            font-size: 16px; /* Adjust base font size */
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #b9fbc0, #96ff40);
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 300px;
+            height: auto; /* Adjust height based on content */
+            background-color: #ffffff84;
+            border-radius: 30px;
+            margin-bottom: 10px;
+            padding: 1em; /* Add padding for better spacing */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Optional: Add shadow for better visual effect */
+            position: relative; /* Ensure positioning context for button */
+        }
+
+        .emoji {
+            font-size: 3.5em; /* Smaller emoji size for better fit */
+            margin-bottom: 0.5em;
+            text-align: center;
+            text-shadow: 0.01em 0.01em 0.01em rgba(0, 0, 0, 0.3);
+        }
+
+        .emoji.temp {
+            color: #26ff22; /* Color for temperature emoji */
+        }
+
+        .emoji.humi {
+            color: #2196f3; /* Color for humidity emoji */
+        }
+
+        .slider {
+            width: 80%;
+            max-width: 300px;
+            height: 1em; /* Adjust height of the slider */
+            border-radius: 0.5em;
+            background-image: linear-gradient(90deg, #b4ffc3, #ffa4a4); /* Gradient for temperature */
+            box-shadow: inset 0 0 0.05em rgba(0, 0, 0, 0.6);
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            margin: 0.5em 0; /* Add margin for spacing */
+        }
+        .slider::-webkit-slider-thumb {
+          width: 1em;
+          height: 1.8em;
+          border-radius: 30px;
+          background-image: radial-gradient(#eee, #ccc);
+          filter: drop-shadow(0.01em 0.01em 0.01em rgba(0, 0, 0, 0.5));
+          cursor: default; /* Change cursor to default */
+          -webkit-appearance: none;
+          appearance: none;
+      }
+
+      .slider::-moz-range-thumb {
+          width: 1em;
+          height: 1.8em;
+          border-radius: 30px;
+          background-image: radial-gradient(#eee, #bbb);
+          filter: drop-shadow(0.01em 0.01em 0.01em rgba(0, 0, 0, 0.5));
+          cursor: default; /* Change cursor to default */
+          border: none;
+          -moz-appearance: none;
+          appearance: none;
+      }
+
+        .slider2 {
+            width: 80%;
+            max-width: 300px;
+            height: 1em; /* Adjust height of the slider */
+            border-radius: 0.5em;
+            background-image: linear-gradient(90deg, rgb(255, 177, 177), #a7ffb8); /* Gradient for humidity */
+            box-shadow: inset 0 0 0.05em rgba(0, 0, 0, 0.6);
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            margin: 0.5em 0; /* Add margin for spacing */
+        }
+
+        .slider2::-webkit-slider-thumb {
+            width: 1em;
+            height: 1.8em;
+            border-radius: 30px;
+            background-image: radial-gradient(#eee, #ccc);
+            filter: drop-shadow(0.01em 0.01em 0.01em rgba(0, 0, 0, 0.5));
+            cursor: default; /* Change cursor to default */
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .slider2::-moz-range-thumb {
+            width: 1em;
+            height: 1.8em;
+            border-radius: 30px;
+            background-image: radial-gradient(#eee, #bbb);
+            filter: drop-shadow(0.01em 0.01em 0.01em rgba(0, 0, 0, 0.5));
+            cursor: default; /* Change cursor to default */
+            border: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        .temperature, .humidity {
+            font-family: "Open Sans", Arial, sans-serif;
+            font-size: 2.7em; /* Slightly larger font size for readability */
+            font-weight: 1000;
+            margin-top: 0.5em;
+            color: #292929;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        .cont {
+            background-color: #ffffff80;
+            border-radius: 12px;
+            padding: 10px 10px;
+           
+            margin-bottom: 1em; /* Add some space below the container */
+            text-align: center;
+            width: 70%; /* Make sure it fits within the container */
+        }
+
+        .convert-btn {
+            background-color: #aeaeae3c;
+            color: rgb(255, 255, 255);
+            border: none;
+            border-radius: 50%;
+            width: 2em;
+            height: 2em;
+            cursor: pointer;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.2em;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 1000;
+        }
+    </style>
+</head>
+<body>
+
+
+  <div class="container">
+    <button class="convert-btn" aria-label="Convert temperature"><span class="material-symbols-outlined">
+      change_circle
+      </span></button>
+    <span class="emoji temp" role="img" aria-label="temperature emoji">😊</span>
+    <div class="cont">
+      <p class="temperature"><span class="temperature-output">20</span>&deg;C</p>
+    </div>
+    <input type="range" class="slider" min="0" max="40" value="20" aria-label="temperature in degrees Celsius" disabled>
+  </div>
+
+  <div class="container">
+    <span class="emoji humi" role="img" aria-label="humidity emoji">🌿</span>
+    <div class="cont">
+      <p class="humidity"><span class="humidity-output">50</span>%</p>
+    </div>
+    <input type="range" class="slider2" min="0" max="100" value="50" aria-label="humidity percentage" disabled>
+  </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB9MxbTtO_uHvvWeYhDVwL8z7nd-OH61FE",
+            authDomain: "weather-e9296.firebaseapp.com",
+            databaseURL: "https://weather-e9296-default-rtdb.firebaseio.com",
+            projectId: "weather-e9296",
+            storageBucket: "weather-e9296.appspot.com",
+            messagingSenderId: "843300690457",
+            appId: "1:843300690457:web:8122c82c8f65527e202888"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // References to the database paths for temperature and humidity
+        const tempRef = database.ref('DHT11/Temperature');
+        const humiRef = database.ref('DHT11/Humidity');
+
+        // Get references to DOM elements
+        const tempEmoji = document.querySelector(".emoji.temp");
+        const humiEmoji = document.querySelector(".emoji.humi");
+        const tempSlider = document.querySelector(".slider");
+        const humiSlider = document.querySelector(".slider2");
+        const tempOutput = document.querySelector(".temperature-output");
+        const humiOutput = document.querySelector(".humidity-output");
+        const convertBtn = document.querySelector(".convert-btn");
+
+        // State for Celsius/Fahrenheit
+        let isCelsius = true;
+
+        // Function to convert Celsius to Fahrenheit
+        const celsiusToFahrenheit = (celsius) => {
+            return (celsius * 9/5) + 32;
+        };
+
+        // Function to convert Fahrenheit to Celsius
+        const fahrenheitToCelsius = (fahrenheit) => {
+            return (fahrenheit - 32) * 5/9;
+        };
+
+        // Function to display temperature and update temperature emoji
+        const displayTemp = (temperature) => {
+            let displayTemp = temperature;
+            if (!isCelsius) {
+                displayTemp = celsiusToFahrenheit(temperature);
+            }
+            tempOutput.textContent = Math.round(displayTemp);
+            tempSlider.value = temperature; // Update slider value based on temperature
+
+            // Update emoji based on temperature
+            if (isCelsius) {
+                if (temperature >= 0 && temperature <= 10) {
+                    tempEmoji.textContent = "🥶"; // Freezing face
+                } else if (temperature > 10 && temperature <= 20) {
+                    tempEmoji.textContent = "😊"; // Smiling face
+                } else if (temperature > 20 && temperature <= 30) {
+                    tempEmoji.textContent = "😅"; // Sweating face
+                } else {
+                    tempEmoji.textContent = "🥵"; // Hot face
+                }
+            } else {
+                if (displayTemp <= 32) {
+                    tempEmoji.textContent = "🥶"; // Freezing face
+                } else if (displayTemp > 32 && displayTemp <= 50) {
+                    tempEmoji.textContent = "😊"; // Smiling face
+                } else if (displayTemp > 50 && displayTemp <= 86) {
+                    tempEmoji.textContent = "😅"; // Sweating face
+                } else {
+                    tempEmoji.textContent = "🥵"; // Hot face
+                }
+            }
+            // Update temperature display unit
+            document.querySelector(".temperature").innerHTML = `${Math.round(displayTemp)}&deg;${isCelsius ? 'C' : 'F'}`;
+        };
+
+        // Function to display humidity and update humidity emoji
+        const displayHumi = (humidity) => {
+            humiOutput.textContent = humidity;
+            humiSlider.value = humidity; // Update slider value based on humidity
+            humiEmoji.textContent = humidity > 70 ? "💧" : "🌿"; // 💧 for high humidity, 🌿 for normal
+        };
+
+        // Listener for temperature changes
+        tempRef.on('value', (snapshot) => {
+            const temperature = snapshot.val();
+            displayTemp(temperature);
+        });
+
+        // Listener for humidity changes
+        humiRef.on('value', (snapshot) => {
+            const humidity = snapshot.val();
+            displayHumi(humidity);
+        });
+
+        // Button click event to toggle Celsius/Fahrenheit
+        convertBtn.addEventListener("click", () => {
+            isCelsius = !isCelsius;
+            tempRef.once('value').then(snapshot => {
+                const temperature = snapshot.val();
+                displayTemp(temperature);
+            });
+        });
+    </script>
+</body>
+</html>
