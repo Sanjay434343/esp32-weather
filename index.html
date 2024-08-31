@@ -68,27 +68,27 @@
             margin: 0.5em 0; /* Add margin for spacing */
         }
         .slider::-webkit-slider-thumb {
-          width: 1em;
-          height: 1.8em;
-          border-radius: 30px;
-          background-image: radial-gradient(#eee, #ccc);
-          filter: drop-shadow(0.01em 0.01em 0.01em rgba(0, 0, 0, 0.5));
-          cursor: default; /* Change cursor to default */
-          -webkit-appearance: none;
-          appearance: none;
-      }
+            width: 1em;
+            height: 1.8em;
+            border-radius: 30px;
+            background-image: radial-gradient(#eee, #ccc);
+            filter: drop-shadow(0.01em 0.01em 0.01em rgba(0, 0, 0, 0.5));
+            cursor: default; /* Change cursor to default */
+            -webkit-appearance: none;
+            appearance: none;
+        }
 
-      .slider::-moz-range-thumb {
-          width: 1em;
-          height: 1.8em;
-          border-radius: 30px;
-          background-image: radial-gradient(#eee, #bbb);
-          filter: drop-shadow(0.01em 0.01em 0.01em rgba(0, 0, 0, 0.5));
-          cursor: default; /* Change cursor to default */
-          border: none;
-          -moz-appearance: none;
-          appearance: none;
-      }
+        .slider::-moz-range-thumb {
+            width: 1em;
+            height: 1.8em;
+            border-radius: 30px;
+            background-image: radial-gradient(#eee, #bbb);
+            filter: drop-shadow(0.01em 0.01em 0.01em rgba(0, 0, 0, 0.5));
+            cursor: default; /* Change cursor to default */
+            border: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
 
         .slider2 {
             width: 80%;
@@ -140,7 +140,6 @@
             background-color: #ffffff80;
             border-radius: 12px;
             padding: 10px 10px;
-           
             margin-bottom: 1em; /* Add some space below the container */
             text-align: center;
             width: 70%; /* Make sure it fits within the container */
@@ -148,7 +147,7 @@
 
         .convert-btn {
             background-color: #aeaeae3c;
-            color: rgb(255, 255, 255);
+            color: rgb(0, 0, 0);
             border: none;
             border-radius: 50%;
             width: 2em;
@@ -163,12 +162,50 @@
             align-items: center;
             font-weight: 1000;
         }
+
+        .status {
+            margin-top: 20px;
+            font-size: 1.5em;
+            color: #333;
+        }
+
+        #esp-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #status-symbol {
+            font-weight: bold;
+            color: #000000; /* Color for status symbol */
+        }
+
+        .convert-btn2 {
+            background-color: #aeaeae3c;
+            color: rgb(0, 0, 0);
+            border: none;
+            border-radius: 50%;
+            width: 2em;
+            height: 2em;
+            cursor: pointer;
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            font-size: 1.2em;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 1000;
+            text-align: center;
+            transition: 1s ease-in-out;
+        }
     </style>
 </head>
 <body>
 
-
   <div class="container">
+    <p id="esp-status" class="convert-btn2"><span id="status-symbol" style="margin-top: -3px;"></span></p>
+
     <button class="convert-btn" aria-label="Convert temperature"><span class="material-symbols-outlined">
       change_circle
       </span></button>
@@ -187,6 +224,9 @@
     <input type="range" class="slider2" min="0" max="100" value="50" aria-label="humidity percentage" disabled>
   </div>
 
+  <div class="status">
+  </div>
+
     <script>
         // Firebase configuration
         const firebaseConfig = {
@@ -196,101 +236,67 @@
             projectId: "weather-e9296",
             storageBucket: "weather-e9296.appspot.com",
             messagingSenderId: "843300690457",
-            appId: "1:843300690457:web:8122c82c8f65527e202888"
+            appId: "1:843300690457:web:8122c1c7b8e3685043b5b1",
+            measurementId: "G-6N3BJ8D7NK"
         };
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // References to the database paths for temperature and humidity
+        // References to Firebase nodes
         const tempRef = database.ref('DHT11/Temperature');
-        const humiRef = database.ref('DHT11/Humidity');
+        const humidityRef = database.ref('DHT11/Humidity');
+        const statusRef = database.ref('DHT11/Status');
 
-        // Get references to DOM elements
-        const tempEmoji = document.querySelector(".emoji.temp");
-        const humiEmoji = document.querySelector(".emoji.humi");
-        const tempSlider = document.querySelector(".slider");
-        const humiSlider = document.querySelector(".slider2");
-        const tempOutput = document.querySelector(".temperature-output");
-        const humiOutput = document.querySelector(".humidity-output");
-        const convertBtn = document.querySelector(".convert-btn");
+        // Initial data load and listener setup
+        tempRef.on('value', (snapshot) => {
+            const temp = snapshot.val();
+            document.querySelector('.temperature-output').textContent = temp;
+            document.querySelector('.slider').value = temp;
+        });
 
-        // State for Celsius/Fahrenheit
-        let isCelsius = true;
+        humidityRef.on('value', (snapshot) => {
+            const humidity = snapshot.val();
+            document.querySelector('.humidity-output').textContent = humidity;
+            document.querySelector('.slider2').value = humidity;
+        });
 
-        // Function to convert Celsius to Fahrenheit
-        const celsiusToFahrenheit = (celsius) => {
-            return (celsius * 9/5) + 32;
-        };
+        // Status monitoring
+        let previousStatus = '';
+        let lastChangeTime = Date.now();
+        const statusChangeThreshold = 2000; // 2 seconds
 
-        // Function to convert Fahrenheit to Celsius
-        const fahrenheitToCelsius = (fahrenheit) => {
-            return (fahrenheit - 32) * 5/9;
-        };
+        const handleStatusUpdate = (status) => {
+            const currentTime = Date.now();
+            document.getElementById('status-symbol').textContent = status;
 
-        // Function to display temperature and update temperature emoji
-        const displayTemp = (temperature) => {
-            let displayTemp = temperature;
-            if (!isCelsius) {
-                displayTemp = celsiusToFahrenheit(temperature);
-            }
-            tempOutput.textContent = Math.round(displayTemp);
-            tempSlider.value = temperature; // Update slider value based on temperature
-
-            // Update emoji based on temperature
-            if (isCelsius) {
-                if (temperature >= 0 && temperature <= 10) {
-                    tempEmoji.textContent = "🥶"; // Freezing face
-                } else if (temperature > 10 && temperature <= 20) {
-                    tempEmoji.textContent = "😊"; // Smiling face
-                } else if (temperature > 20 && temperature <= 30) {
-                    tempEmoji.textContent = "😅"; // Sweating face
-                } else {
-                    tempEmoji.textContent = "🥵"; // Hot face
+            // Check if status has stopped changing
+            if (status === previousStatus) {
+                if (currentTime - lastChangeTime >= statusChangeThreshold) {
+                    console.log('Status is inactive');
+                    // You can add code here to deactivate LED or take other actions
+                    // For example: send a command to turn off an LED
+                    updateLEDStatus("off");
                 }
             } else {
-                if (displayTemp <= 32) {
-                    tempEmoji.textContent = "🥶"; // Freezing face
-                } else if (displayTemp > 32 && displayTemp <= 50) {
-                    tempEmoji.textContent = "😊"; // Smiling face
-                } else if (displayTemp > 50 && displayTemp <= 86) {
-                    tempEmoji.textContent = "😅"; // Sweating face
-                } else {
-                    tempEmoji.textContent = "🥵"; // Hot face
-                }
+                lastChangeTime = currentTime; // Update last change time
+                previousStatus = status;
             }
-            // Update temperature display unit
-            document.querySelector(".temperature").innerHTML = `${Math.round(displayTemp)}&deg;${isCelsius ? 'C' : 'F'}`;
         };
 
-        // Function to display humidity and update humidity emoji
-        const displayHumi = (humidity) => {
-            humiOutput.textContent = humidity;
-            humiSlider.value = humidity; // Update slider value based on humidity
-            humiEmoji.textContent = humidity > 70 ? "💧" : "🌿"; // 💧 for high humidity, 🌿 for normal
+        // Listen for status changes
+        statusRef.on('value', (snapshot) => {
+            const status = snapshot.val();
+            handleStatusUpdate(status);
+        });
+
+        // Function to update LED status
+        const updateLEDStatus = (status) => {
+            // Code to update LED status via Firebase or another method
+            const ledRef = database.ref('LED');
+            ledRef.set(status);
         };
-
-        // Listener for temperature changes
-        tempRef.on('value', (snapshot) => {
-            const temperature = snapshot.val();
-            displayTemp(temperature);
-        });
-
-        // Listener for humidity changes
-        humiRef.on('value', (snapshot) => {
-            const humidity = snapshot.val();
-            displayHumi(humidity);
-        });
-
-        // Button click event to toggle Celsius/Fahrenheit
-        convertBtn.addEventListener("click", () => {
-            isCelsius = !isCelsius;
-            tempRef.once('value').then(snapshot => {
-                const temperature = snapshot.val();
-                displayTemp(temperature);
-            });
-        });
     </script>
 </body>
 </html>
