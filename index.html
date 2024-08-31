@@ -1,91 +1,114 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Temperature & Humidity</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      background: linear-gradient(135deg, #72c2ff, #ff8c00);
-      color: #fff;
-      text-align: center;
-    }
-    
-    h1 {
-      font-size: 3em;
-      margin-bottom: 0.5em;
-    }
-
-    .container {
-      background: rgba(0, 0, 0, 0.5);
-      border-radius: 10px;
-      padding: 2em;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    p {
-      font-size: 1.5em;
-      margin: 0.5em 0;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .number {
-      display: inline-block;
-      font-size: 1em;
-      font-weight: bold;
-      transition: transform 0.3s ease-in-out;
-    }
-
-    .number.animate {
-      transform: scale(1.5);
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    .fadeIn {
-      animation: fadeIn 1s ease-in-out;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Weather Data</title>
+    <!-- Include Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            height: 100vh;
+            background: linear-gradient(135deg, #1e2a38, #3b4c6c);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .data-container {
+            display: inline-block;
+            padding: 20px;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 1s ease-out;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #0ff;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.7);
+        }
+        p {
+            font-size: 1.5em;
+            margin: 10px 0;
+        }
+        span {
+            color: #0ff;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes pulse {
+            0% {
+                color: #0ff;
+                text-shadow: 0 0 5px rgba(0, 255, 255, 0.7);
+            }
+            50% {
+                color: #fff;
+                text-shadow: 0 0 10px rgba(0, 255, 255, 0.9);
+            }
+            100% {
+                color: #0ff;
+                text-shadow: 0 0 5px rgba(0, 255, 255, 0.7);
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Temperature & Humidity</h1>
-    <p>Humidity: <span id="humidity" class="number fadeIn">Loading...</span></p>
-    <p>Temperature: <span id="temperature" class="number fadeIn">Loading...</span></p>
-  </div>
-  <script>
-    var socket = new WebSocket('ws://192.168.38.94:81'); // Replace with your ESP32 IP address
-    
-    function animateNumber(element, newValue) {
-      element.classList.add('animate');
-      setTimeout(() => {
-        element.textContent = newValue;
-        element.classList.remove('animate');
-      }, 300); // Duration of the scale animation
-    }
+    <div class="data-container">
+        <h1>Live Weather Data</h1>
+        <p>Temperature: <span id="temp">Loading...</span> °C</p>
+        <p>Humidity: <span id="humi">Loading...</span> %</p>
+    </div>
 
-    socket.onmessage = function(event) {
-      var data = JSON.parse(event.data);
-      animateNumber(document.getElementById('humidity'), data.humidity + ' %');
-      animateNumber(document.getElementById('temperature'), data.temperature + ' °C');
-    };
-    
-    socket.onopen = function(event) {
-      console.log('WebSocket is open now.');
-    };
-    
-    socket.onclose = function(event) {
-      console.log('WebSocket is closed now.');
-    };
-  </script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB9MxbTtO_uHvvWeYhDVwL8z7nd-OH61FE",
+            authDomain: "weather-e9296.firebaseapp.com",
+            databaseURL: "https://weather-e9296-default-rtdb.firebaseio.com",
+            projectId: "weather-e9296",
+            storageBucket: "weather-e9296.appspot.com",
+            messagingSenderId: "843300690457",
+            appId: "1:843300690457:web:8122c82c8f65527e202888"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // References to the database paths for temperature and humidity
+        const tempRef = database.ref('DHT11/Temperature');
+        const humiRef = database.ref('DHT11/Humidity');
+
+        // Listening for real-time updates to temperature
+        tempRef.on('value', (snapshot) => {
+            const temp = snapshot.val();
+            document.getElementById('temp').textContent = temp;
+        });
+
+        // Listening for real-time updates to humidity
+        humiRef.on('value', (snapshot) => {
+            const humi = snapshot.val();
+            document.getElementById('humi').textContent = humi;
+        });
+    </script>
 </body>
 </html>
