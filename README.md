@@ -1,0 +1,5 @@
+ESP-WROOM-32 CONNECTION
+
+VCC --- 3v3 , 
+DATA --- G4 ,
+GND --- GND ,
